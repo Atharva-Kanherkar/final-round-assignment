@@ -37,10 +37,6 @@ htmlcov/
 *.tmp
 *.bak
 
-# Documentation (keep only README and deployment docs)
+# Documentation (keep only README.md)
 *.md
 !README.md
-!DEPLOYMENT.md
-!API_README.md
-!DEPLOY_TO_DO.md
-!DEPLOY_FRONTEND.md
