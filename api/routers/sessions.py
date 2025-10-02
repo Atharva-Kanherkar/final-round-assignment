@@ -1,7 +1,7 @@
 """Interview session endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 import logging
 import json
@@ -20,6 +20,7 @@ from api.schemas import (
 )
 from api.services.interview_service import InterviewService
 from api.models.db_models import DBSession, DBMessage, DBEvaluation, DBFinalReport
+from api.utils.file_parser import FileParser
 from src.services.llm_client import LLMClient
 from src.utils.config import load_config
 from src.utils.logger import setup_logger
@@ -63,7 +64,7 @@ async def create_session(
     service: InterviewService = Depends(get_interview_service)
 ):
     """
-    Create new interview session.
+    Create new interview session with text input.
 
     Args:
         request: Session creation request with resume and job description
@@ -89,6 +90,69 @@ async def create_session(
 
     except Exception as e:
         logger.error(f"Session creation failed: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/sessions/upload", response_model=dict, status_code=201)
+async def create_session_with_files(
+    resume_file: UploadFile = File(..., description="Resume file (PDF, DOCX, or TXT)"),
+    job_description_file: Optional[UploadFile] = File(None, description="Job description file (optional)"),
+    job_description_text: Optional[str] = Form(None, description="Job description as text (if file not provided)"),
+    service: InterviewService = Depends(get_interview_service)
+):
+    """
+    Create new interview session with file upload.
+
+    Args:
+        resume_file: Resume file (PDF, DOCX, or TXT)
+        job_description_file: Job description file (optional)
+        job_description_text: Job description as text (if file not provided)
+
+    Returns:
+        Session details and first question
+    """
+    try:
+        # Parse resume file
+        logger.info(f"Parsing resume file: {resume_file.filename}")
+        resume_text = await FileParser.parse_file(resume_file)
+
+        # Parse job description (file or text)
+        if job_description_file:
+            logger.info(f"Parsing job description file: {job_description_file.filename}")
+            jd_text = await FileParser.parse_file(job_description_file)
+        elif job_description_text:
+            jd_text = job_description_text.strip()
+            if len(jd_text) < 50:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Job description text is too short (minimum 50 characters)"
+                )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Either job_description_file or job_description_text must be provided"
+            )
+
+        # Create session
+        db_session, first_question = await service.create_session(
+            resume_text,
+            jd_text
+        )
+
+        return {
+            "session_id": str(db_session.id),
+            "candidate_name": db_session.candidate_name,
+            "job_title": db_session.job_title,
+            "company": db_session.company,
+            "topics": db_session.topics,
+            "first_question": first_question.dict(),
+            "status": db_session.status
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Session creation with files failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 

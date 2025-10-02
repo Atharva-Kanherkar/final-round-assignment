@@ -57,7 +57,7 @@ export interface FinalReportResponse {
 
 export const api = {
   /**
-   * Create new interview session
+   * Create new interview session with text
    */
   async createSession(data: CreateSessionRequest): Promise<SessionResponse> {
     const response = await fetch(`${API_URL}/api/sessions`, {
@@ -71,6 +71,30 @@ export const api = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to create session');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Create new interview session with file upload
+   */
+  async createSessionWithFiles(
+    resumeFile: File,
+    jobDescriptionText: string
+  ): Promise<SessionResponse> {
+    const formData = new FormData();
+    formData.append('resume_file', resumeFile);
+    formData.append('job_description_text', jobDescriptionText);
+
+    const response = await fetch(`${API_URL}/api/sessions/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create session with files');
     }
 
     return response.json();
