@@ -1,13 +1,49 @@
 # AI Mock Interview Coach System
 
-A production-grade AI-powered system that conducts intelligent technical interviews using a multi-agent architecture with comprehensive error handling, input validation, and resilience patterns.
-
 **Interview Assignment Submission**
+
+## TL;DR
+
+An AI-powered interview coach system featuring a multi-agent architecture that conducts intelligent technical interviews. Built with a Fastify API backend and Next.js frontend, deployed on Digital Ocean and Vercel respectively. The system parses resumes/job descriptions, generates contextual questions, evaluates responses with multi-dimensional scoring, and provides real-time feedback. Features include circuit breaker patterns, retry logic, comprehensive input validation, 188 tests (70% coverage), and handling of 100+ edge cases. The multi-agent system consists of 4 specialized agents (Orchestrator, Interviewer, Evaluator, TopicManager) coordinated through message passing for resilient, production-grade interview automation.
+
+---
+
+## 🎥 Demo Videos
+
+- **Full System Walkthrough**: [Watch on Loom](https://www.loom.com/share/59aee0875afd437dbd8b282b99eacf5f?sid=af2b2830-63e9-45b0-8e3d-4506bbc4d3db)
+- **Feature Demonstration**: [Watch on Loom](https://www.loom.com/share/629e689cc8eb479db13a7311386145f6?sid=6a2ff85c-5a06-469d-ae71-7d27903250e0)
+
+## 🚀 Live Deployment
+
+- **Frontend**: [https://final-round-assignment.vercel.app](https://final-round-assignment.vercel.app) (Vercel)
+- **Backend API**: [https://orca-app-jubw8.ondigitalocean.app](https://orca-app-jubw8.ondigitalocean.app) (Digital Ocean)
+
+## 🛠️ Tech Stack
+
+### Backend
+- **Framework**: Fastify API
+- **Language**: Python 3.12+
+- **LLM Integration**: OpenAI API (direct SDK)
+- **Hosting**: Digital Ocean
+
+### Frontend
+- **Framework**: Next.js
+- **Hosting**: Vercel
+
+### Architecture
+- Multi-agent system with supervisor pattern
+- RESTful API communication
+- Real-time interview processing
+- Session persistence with JSON storage
 
 ---
 
 ## Table of Contents
 
+- [TL;DR](#tldr)
+- [Demo Videos](#-demo-videos)
+- [Live Deployment](#-live-deployment)
+- [Tech Stack](#-tech-stack)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Features](#features)
