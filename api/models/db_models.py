@@ -33,7 +33,7 @@ class DBSession(Base):
     # Session state
     current_topic = Column(String(100), nullable=False)
     current_topic_index = Column(Integer, default=0)
-    status = Column(SQLEnum(SessionStatus), default=SessionStatus.ACTIVE, nullable=False)
+    status = Column(SQLEnum(SessionStatus, create_type=False), default=SessionStatus.ACTIVE, nullable=False)
 
     # Timestamps
     start_time = Column(DateTime, default=datetime.utcnow, nullable=False)
