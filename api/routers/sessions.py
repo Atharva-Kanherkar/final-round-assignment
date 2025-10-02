@@ -84,7 +84,7 @@ async def create_session(
             "company": db_session.company,
             "topics": db_session.topics,
             "first_question": first_question.dict(),
-            "status": db_session.status.value
+            "status": db_session.status
         }
 
     except Exception as e:

@@ -102,7 +102,7 @@ class InterviewService:
             topics=[t.to_dict() for t in topics],
             current_topic=agent_session.current_topic,
             current_topic_index=0,
-            status=SessionStatus.ACTIVE,
+            status="active",
             start_time=agent_session.start_time,
             questions_asked=0
         )
@@ -261,7 +261,7 @@ class InterviewService:
         # Update database session
         db_session = self.db.query(DBSession).filter(DBSession.id == session_id).first()
         if db_session:
-            db_session.status = SessionStatus.COMPLETED
+            db_session.status = "completed"
             db_session.end_time = agent_session.end_time
             db_session.average_score = final_report.overall_score
 
