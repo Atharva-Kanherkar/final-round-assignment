@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api, QuestionResponse, EvaluationResponse, FinalReportResponse } from '@/lib/api'
-import { Loader2, Send, Trophy, TrendingUp, MessageSquare, Star, ArrowRight } from 'lucide-react'
+import { Loader2, Send, Trophy, TrendingUp, MessageSquare, Star, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
 
 type Message = {
   role: 'interviewer' | 'candidate' | 'evaluation'
@@ -110,20 +116,20 @@ export default function InterviewPage() {
         {[...Array(5)].map((_, i) => (
           <Star
             key={i}
-            className={`w-5 h-5 ${i < stars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+            className={`w-4 h-4 ${i < stars ? 'fill-yellow-500 text-yellow-500' : 'text-muted'}`}
           />
         ))}
-        <span className="ml-2 font-semibold text-lg">{score.toFixed(1)}/5.0</span>
+        <span className="ml-2 font-semibold text-base">{score.toFixed(1)}/5.0</span>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading interview session...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Loading interview session...</p>
         </div>
       </div>
     )
@@ -131,226 +137,263 @@ export default function InterviewPage() {
 
   if (interviewComplete && finalReport) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12">
+      <div className="min-h-screen bg-background py-12">
         <div className="container mx-auto px-4 max-w-4xl">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8">
-            <div className="text-center mb-8">
-              <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                Interview Complete!
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Here's your comprehensive evaluation
-              </p>
-            </div>
+          <Card>
+            <CardHeader className="text-center space-y-4 pb-8">
+              <div className="mx-auto w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center">
+                <Trophy className="w-8 h-8 text-yellow-500" />
+              </div>
+              <div>
+                <CardTitle className="text-3xl mb-2">Interview Complete</CardTitle>
+                <CardDescription>
+                  Here's your comprehensive evaluation
+                </CardDescription>
+              </div>
+            </CardHeader>
 
-            {/* Overall Score */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6 mb-8">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Overall Score</p>
-                <div className="flex justify-center mb-2">
-                  {renderScore(finalReport.overall_score)}
+            <CardContent className="space-y-8">
+              {/* Overall Score */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-4">
+                    <p className="text-sm text-muted-foreground">Overall Score</p>
+                    <div className="flex justify-center">
+                      {renderScore(finalReport.overall_score)}
+                    </div>
+                    <Badge variant="outline" className="text-lg px-4 py-2">
+                      {finalReport.recommendation}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Topics Covered */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Topics Covered</h3>
+                <div className="flex flex-wrap gap-2">
+                  {finalReport.topics_covered.map((topic, idx) => (
+                    <Badge key={idx} variant="secondary">
+                      {topic}
+                    </Badge>
+                  ))}
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {finalReport.recommendation}
-                </p>
               </div>
-            </div>
 
-            {/* Topics Covered */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Topics Covered
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {finalReport.topics_covered.map((topic, idx) => (
-                  <span
-                    key={idx}
-                    className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium"
-                  >
-                    {topic}
-                  </span>
-                ))}
+              <Separator />
+
+              {/* Strengths */}
+              {finalReport.overall_strengths.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                    <h3 className="text-lg font-semibold text-green-500">Key Strengths</h3>
+                  </div>
+                  <ul className="space-y-3">
+                    {finalReport.overall_strengths.map((strength, idx) => (
+                      <li key={idx} className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{strength}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Areas for Improvement */}
+              {finalReport.areas_for_improvement.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <MessageSquare className="w-5 h-5 text-orange-500" />
+                    <h3 className="text-lg font-semibold text-orange-500">Areas for Improvement</h3>
+                  </div>
+                  <ul className="space-y-3">
+                    {finalReport.areas_for_improvement.map((area, idx) => (
+                      <li key={idx} className="flex items-start gap-3">
+                        <ArrowRight className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{area}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Additional Notes */}
+              {finalReport.additional_notes && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Summary</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {finalReport.additional_notes}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-center pt-4">
+                <Button onClick={() => router.push('/')} size="lg">
+                  Start New Interview
+                </Button>
               </div>
-            </div>
-
-            {/* Strengths */}
-            {finalReport.overall_strengths.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-green-700 dark:text-green-400 mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-6 h-6" />
-                  Key Strengths
-                </h3>
-                <ul className="space-y-2">
-                  {finalReport.overall_strengths.map((strength, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                      <span className="text-gray-700 dark:text-gray-300">{strength}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Areas for Improvement */}
-            {finalReport.areas_for_improvement.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-orange-700 dark:text-orange-400 mb-4 flex items-center gap-2">
-                  <MessageSquare className="w-6 h-6" />
-                  Areas for Improvement
-                </h3>
-                <ul className="space-y-2">
-                  {finalReport.areas_for_improvement.map((area, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-orange-600 dark:text-orange-400 mt-1">→</span>
-                      <span className="text-gray-700 dark:text-gray-300">{area}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Additional Notes */}
-            {finalReport.additional_notes && (
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Summary
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {finalReport.additional_notes}
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="text-center">
-              <button
-                onClick={() => router.push('/')}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Start New Interview
-              </button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {sessionData?.job_title || 'Interview Session'}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                {sessionData?.company || ''} • Candidate: {sessionData?.candidate_name || ''}
-              </p>
-            </div>
-            {currentQuestion && (
-              <div className="text-right">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Current Topic</p>
-                <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                  {currentQuestion.topic}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Topic {currentQuestion.topic_progress}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-bold">
+                  {sessionData?.job_title || 'Interview Session'}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {sessionData?.company && `${sessionData.company} • `}
+                  {sessionData?.candidate_name && `Candidate: ${sessionData.candidate_name}`}
                 </p>
               </div>
-            )}
-          </div>
-        </div>
+              {currentQuestion && (
+                <div className="text-right space-y-1">
+                  <p className="text-xs text-muted-foreground">Current Topic</p>
+                  <Badge variant="default" className="text-sm">
+                    {currentQuestion.topic}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {currentQuestion.topic_progress}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Conversation */}
         <div className="space-y-4 mb-6">
           {messages.map((msg, idx) => (
             <div key={idx}>
               {msg.role === 'interviewer' && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border-l-4 border-blue-600">
-                  <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">
-                    Question #{Math.floor(idx / 3) + 1}
-                  </p>
-                  <p className="text-gray-900 dark:text-white text-lg">{msg.content}</p>
-                </div>
+                <Card className="border-l-4 border-l-primary">
+                  <CardHeader>
+                    <Badge variant="outline" className="w-fit">
+                      Question #{Math.floor(idx / 3) + 1}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-base leading-relaxed">{msg.content}</p>
+                  </CardContent>
+                </Card>
               )}
 
               {msg.role === 'candidate' && (
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border-l-4 border-gray-400">
-                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                    Your Answer
-                  </p>
-                  <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{msg.content}</p>
-                </div>
+                <Card className="border-l-4 border-l-muted bg-muted/30">
+                  <CardHeader>
+                    <Badge variant="secondary" className="w-fit">
+                      Your Answer
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  </CardContent>
+                </Card>
               )}
 
               {msg.role === 'evaluation' && msg.evaluation && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Evaluation
-                    </h3>
-                    {renderScore(msg.evaluation.overall_score)}
-                  </div>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Evaluation</CardTitle>
+                      {renderScore(msg.evaluation.overall_score)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Technical Accuracy</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={msg.evaluation.technical_accuracy * 20} className="h-2" />
+                          <span className="text-sm font-semibold min-w-[3rem]">
+                            {msg.evaluation.technical_accuracy.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Depth</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={msg.evaluation.depth * 20} className="h-2" />
+                          <span className="text-sm font-semibold min-w-[3rem]">
+                            {msg.evaluation.depth.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Clarity</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={msg.evaluation.clarity * 20} className="h-2" />
+                          <span className="text-sm font-semibold min-w-[3rem]">
+                            {msg.evaluation.clarity.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Relevance</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={msg.evaluation.relevance * 20} className="h-2" />
+                          <span className="text-sm font-semibold min-w-[3rem]">
+                            {msg.evaluation.relevance.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Technical Accuracy</p>
-                      <p className="text-lg font-semibold">{msg.evaluation.technical_accuracy.toFixed(1)}/5.0</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Depth</p>
-                      <p className="text-lg font-semibold">{msg.evaluation.depth.toFixed(1)}/5.0</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Clarity</p>
-                      <p className="text-lg font-semibold">{msg.evaluation.clarity.toFixed(1)}/5.0</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Relevance</p>
-                      <p className="text-lg font-semibold">{msg.evaluation.relevance.toFixed(1)}/5.0</p>
-                    </div>
-                  </div>
+                    {msg.evaluation.strengths.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold text-green-500 mb-2 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Strengths
+                        </p>
+                        <ul className="space-y-1.5">
+                          {msg.evaluation.strengths.map((s, i) => (
+                            <li key={i} className="text-sm text-muted-foreground pl-6">
+                              • {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                  {msg.evaluation.strengths.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold text-green-700 dark:text-green-400 mb-2">
-                        ✓ Strengths
+                    {msg.evaluation.gaps.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold text-orange-500 mb-2 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          Areas to Improve
+                        </p>
+                        <ul className="space-y-1.5">
+                          {msg.evaluation.gaps.map((g, i) => (
+                            <li key={i} className="text-sm text-muted-foreground pl-6">
+                              • {g}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    <div className="bg-muted/30 rounded-md p-4">
+                      <p className="text-sm leading-relaxed italic">
+                        {msg.evaluation.feedback}
                       </p>
-                      <ul className="space-y-1">
-                        {msg.evaluation.strengths.map((s, i) => (
-                          <li key={i} className="text-sm text-gray-700 dark:text-gray-300 pl-4">
-                            • {s}
-                          </li>
-                        ))}
-                      </ul>
                     </div>
-                  )}
-
-                  {msg.evaluation.gaps.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-2">
-                        → Areas to Improve
-                      </p>
-                      <ul className="space-y-1">
-                        {msg.evaluation.gaps.map((g, i) => (
-                          <li key={i} className="text-sm text-gray-700 dark:text-gray-300 pl-4">
-                            • {g}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 italic">
-                      {msg.evaluation.feedback}
-                    </p>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           ))}
@@ -358,45 +401,50 @@ export default function InterviewPage() {
 
         {/* Input Area */}
         {!interviewComplete && currentQuestion && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 sticky bottom-4">
-            {error && (
-              <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
+          <Card className="sticky bottom-4 shadow-lg">
+            <CardContent className="pt-6 space-y-4">
+              {error && (
+                <Card className="border-destructive bg-destructive/10">
+                  <CardContent className="pt-4">
+                    <p className="text-destructive text-sm">{error}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Textarea
+                value={userResponse}
+                onChange={(e) => setUserResponse(e.target.value)}
+                placeholder="Type your answer here... Be specific and provide examples."
+                className="min-h-[160px] resize-none"
+                disabled={submitting}
+              />
+
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  {userResponse.length} characters
+                </p>
+
+                <Button
+                  onClick={handleSubmitResponse}
+                  disabled={submitting || !userResponse.trim()}
+                  size="lg"
+                  className="gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Submit Answer
+                      <Send className="w-5 h-5" />
+                    </>
+                  )}
+                </Button>
               </div>
-            )}
-
-            <textarea
-              value={userResponse}
-              onChange={(e) => setUserResponse(e.target.value)}
-              placeholder="Type your answer here... Be specific and provide examples."
-              className="w-full h-40 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none mb-4"
-              disabled={submitting}
-            />
-
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {userResponse.length} characters
-              </p>
-
-              <button
-                onClick={handleSubmitResponse}
-                disabled={submitting || !userResponse.trim()}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Submit Answer
-                    <Send className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
