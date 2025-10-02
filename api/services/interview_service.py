@@ -252,10 +252,11 @@ class InterviewService:
         Returns:
             Final report database object
         """
-        # Get agent session
+        # Get agent session from memory, or reconstruct from database
         agent_session = self.active_sessions.get(session_id)
         if not agent_session:
-            raise ValueError(f"Session {session_id} not found")
+            self.logger.info(f"Session {session_id} not in memory for final report, reconstructing")
+            agent_session = self._reconstruct_session_from_db(session_id)
 
         # Generate report through orchestrator
         final_report = await self.orchestrator.generate_final_report(agent_session)
