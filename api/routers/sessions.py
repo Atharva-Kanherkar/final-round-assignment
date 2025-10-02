@@ -268,9 +268,12 @@ async def submit_response(
         Evaluation and next question
     """
     try:
+        # Use config from environment variables
+        from src.utils.config import load_config
+        cfg = load_config()
         config = {
-            "min_questions_per_topic": 2,
-            "max_questions_per_topic": 4
+            "min_questions_per_topic": cfg.questions_per_topic_min,
+            "max_questions_per_topic": cfg.questions_per_topic_max
         }
 
         result = await service.process_response(
@@ -461,11 +464,16 @@ async def interview_websocket(
                     break
 
                 try:
-                    # Process through service
+                    # Process through service with config from environment
+                    from src.utils.config import load_config
+                    cfg = load_config()
                     result = await service.process_response(
                         session_id,
                         response_text,
-                        {"min_questions_per_topic": 2, "max_questions_per_topic": 4}
+                        {
+                            "min_questions_per_topic": cfg.questions_per_topic_min,
+                            "max_questions_per_topic": cfg.questions_per_topic_max
+                        }
                     )
 
                     # Send evaluation

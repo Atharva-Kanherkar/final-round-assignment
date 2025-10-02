@@ -58,5 +58,14 @@ services:
       - key: TIMEOUT_SECONDS
         value: "30"
 
+      - key: QUESTIONS_PER_TOPIC_MIN
+        value: "1"
+
+      - key: QUESTIONS_PER_TOPIC_MAX
+        value: "2"
+
+      - key: TOTAL_TOPICS_TARGET
+        value: "3"
+
     routes:
       - path: /
