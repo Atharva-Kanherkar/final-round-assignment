@@ -267,148 +267,45 @@ pytest -x
 
 ### Design Decisions
 
-#### 1. LLM Provider Choice
-**Decision**: OpenAI API (direct SDK, no LangChain)
+**1. LLM Provider**: OpenAI API (direct SDK, no LangChain)
+- Provides direct control over API calls and error handling
+- Enables custom retry and circuit breaker implementation
 
-**Rationale**:
-- Direct control over API calls and error handling
-- Simpler dependency management
-- Better observability into API interactions
-- Easier to implement custom retry and circuit breaker logic
+**2. Multi-Agent Communication**: Message Passing with Immutable Objects
+- Prevents shared state bugs
+- Enables independent testing and future distributed deployment
 
-**Implementation**: `src/services/llm_client.py`
+**3. Error Handling**: Custom Exception Hierarchy (37 types) + Circuit Breaker Pattern
+- Granular error classification with targeted recovery strategies
+- Prevents cascading failures through circuit breaker (5 failure threshold, 60s recovery)
 
-#### 2. Multi-Agent Communication
-**Pattern**: Message Passing with Immutable Objects
+**4. Input Validation**: Security-focused validation layer with sanitization
+- Prevents XSS, injection attacks, and malformed data
+- Enforces size limits and business rules
 
-**Rationale**:
-- Prevents shared mutable state bugs
-- Enables independent agent testing
-- Supports future distributed deployment
-- Clear data flow and debugging
+### Resilience Implementation
 
-**Implementation**: `src/models/session.py` (Message class)
-
-#### 3. Error Handling Strategy
-**Pattern**: Custom Exception Hierarchy + Circuit Breaker
-
-**Rationale**:
-- Granular error classification (37 exception types)
-- Prevents cascading failures
-- Enables targeted recovery strategies
-- Preserves error context for debugging
-
-**Implementation**:
-- `src/utils/exceptions.py` - Exception hierarchy
-- `src/utils/circuit_breaker.py` - Circuit breaker pattern
-- `src/services/llm_client.py` - Retry logic integration
-
-#### 4. Input Validation
-**Pattern**: Validation Layer with Sanitization
-
-**Rationale**:
-- Security-first approach
-- Prevents injection attacks
-- Handles malformed data gracefully
-- Enforces business rules
-
-**Implementation**: `src/utils/validators.py`
-
-### Resilience Patterns
-
-#### Circuit Breaker
-```python
-State Transitions: CLOSED → OPEN → HALF_OPEN → CLOSED
-Failure Threshold: 5 consecutive failures
-Recovery Timeout: 60 seconds
-Half-Open Testing: 2 successes to close
-```
-
-**Tested**: 23 tests covering all state transitions and edge cases
-
-#### Retry Logic
-```python
-Strategy: Exponential backoff with jitter
-Max Retries: 3 attempts
-Backoff Intervals: 1s, 2s, 4s, 8s
-Retry Conditions: Rate limits, timeouts, transient API errors
-```
-
-**Tested**: Verified through LLM client tests
-
-#### Graceful Degradation
-```python
-Question Generation Failure → Fallback question template
-Evaluation Failure → Default 3.0 score with generic feedback
-Topic Selection Failure → Priority-based selection
-Parsing Failure → Default values with warnings
-```
-
-**Tested**: Fallback mechanisms tested in agent unit tests
+- **Circuit Breaker**: CLOSED → OPEN (after 5 failures) → HALF_OPEN (after 60s) → CLOSED (after 2 successes)
+- **Retry Logic**: Exponential backoff (1s, 2s, 4s) for rate limits and timeouts
+- **Graceful Degradation**: Fallback templates for all agent failures
 
 ---
 
 ## Edge Case Handling
 
-### Input Validation (40 tests)
+The system handles 100+ edge cases across six categories:
 
-**Resume/Job Description**:
-- Empty or whitespace-only inputs → `InvalidResumeError`
-- Too short (< 50 chars) → `InvalidResumeError`
-- Too large (> 500KB/100KB) → Size limit error
-- Binary data → Detection and rejection
-- Non-UTF8 encoding → Validation error
-- Excessive whitespace → Normalized to single spaces
-- Control characters → Removed (except newlines/tabs)
-- Null bytes → Stripped from input
+**Input Validation** (40 tests): Empty inputs, size limits (50 bytes - 500KB), binary data, security threats (XSS, path traversal, template injection, command injection), whitespace normalization, control character removal.
 
-**Security Threats**:
-- XSS attempts (`<script>`, `javascript:`) → Detected and blocked
-- Path traversal (`../`) → Validation error
-- Template injection (`${}`) → Detected and blocked
-- Command injection (`exec(`, `eval(`) → Pattern matching rejection
+**LLM API Failures** (23 tests): Rate limiting with exponential backoff, timeout retries, network errors, empty/invalid/malformed JSON responses, API key validation.
 
-### LLM API Failures (23 tests)
+**Agent Coordination** (18 tests): Missing fields, invalid types, score clamping (0-5), NaN/Inf handling, empty outputs, fallback mechanisms.
 
-- **Rate Limiting (429)**: Exponential backoff, circuit breaker activation
-- **Timeouts**: 3 retries with increasing intervals
-- **Network Errors**: Retry logic with circuit breaker
-- **Empty Responses**: Detection and fallback response
-- **Invalid JSON**: Extraction with regex, validation, or error
-- **Malformed JSON**: Multiple parsing strategies
-- **API Key Errors**: Validation at startup
+**Session Management** (27 tests): State consistency, serialization, empty collections, long conversation history, metadata tracking.
 
-### Agent Coordination (18 tests)
+**Topic Management** (20 tests): No topics (fallback to defaults), single topic handling, priority filtering, deduplication, skill overlap analysis.
 
-- **Missing Output Fields**: Pydantic validation with clear errors
-- **Invalid Types**: Type coercion or `AgentValidationError`
-- **Scores Out of Range**: Clamping to 0-5 bounds
-- **NaN/Inf Values**: Handled or rejected
-- **Empty Questions**: Validation with minimum length (10 chars)
-- **Agent Failures**: Fallback responses maintained
-
-### Session Management (27 tests)
-
-- **State Consistency**: Validated across operations
-- **Serialization**: All models support `to_dict()` for JSON export
-- **Empty Collections**: Zero evaluations → 0.0 average score
-- **Long History**: Handled efficiently with history pruning
-- **Conversation Tracking**: Alternating roles validated
-
-### Topic Management (20 tests)
-
-- **No Topics Generated**: Fallback to default topics
-- **Single Topic**: Skip transition logic
-- **Too Many Topics**: Priority-based filtering
-- **No Skill Overlap**: Generate from candidate skills
-- **Duplicate Topics**: Deduplication logic
-
-### Circuit Breaker (23 tests)
-
-- **State Machine**: All transitions (CLOSED/OPEN/HALF_OPEN) tested
-- **Threshold Behavior**: Custom thresholds (1, 3, 5, 10) validated
-- **Recovery**: Timeout-based and manual reset tested
-- **Concurrent Failures**: Proper counting verified
+**Circuit Breaker** (23 tests): All state transitions, custom thresholds, timeout-based recovery, concurrent failure handling.
 
 ---
 
@@ -648,286 +545,28 @@ tail -f logs/interview_*.log
 
 ---
 
-## Technical Highlights
+## Performance
 
-### 1. Circuit Breaker Implementation
+| Operation | Typical | Max |
+|-----------|---------|-----|
+| Question Generation | 3-4s | 8s |
+| Response Evaluation | 2-3s | 5s |
+| Full Interview (5 topics) | 12-15min | 25min |
 
-Prevents cascading failures when external services fail:
-
-```python
-class CircuitBreaker:
-    States: CLOSED → OPEN → HALF_OPEN → CLOSED
-    Failure Threshold: 5 failures
-    Recovery Timeout: 60 seconds
-    Half-Open Success Requirement: 2 consecutive successes
-```
-
-**Benefits**:
-- Fails fast when API is down
-- Automatic recovery attempts
-- Prevents resource exhaustion
-- Provides clear status monitoring
-
-**Test Coverage**: 99% (23 tests)
-
-### 2. Input Validation Pipeline
-
-Three-layer validation:
-
-```python
-1. Size Validation → Check min/max bounds
-2. Security Validation → Detect malicious patterns
-3. Data Sanitization → Remove dangerous content
-
-Patterns Detected:
-- XSS: <script>, javascript:
-- Injection: ${}, exec(, eval(
-- Traversal: ../
-- Binary: High ratio of non-printable characters
-```
-
-**Test Coverage**: 93% (40 tests)
-
-### 3. Retry Logic
-
-Exponential backoff with selective retry:
-
-```python
-Retry Conditions:
-- RateLimitError (429)
-- APITimeoutError
-- APIError (5xx)
-
-Backoff Schedule:
-- Attempt 1: Immediate
-- Attempt 2: 1 second delay
-- Attempt 3: 2 seconds delay
-- Attempt 4: 4 seconds delay
-
-Max Attempts: 3 retries (4 total attempts)
-```
-
-**Test Coverage**: Verified in LLM client tests
-
-### 4. Multi-Agent Coordination
-
-**Message Flow**:
-```
-User Input → OrchestratorAgent
-           → EvaluatorAgent → ResponseEvaluation
-           → TopicManagerAgent → TransitionDecision
-           → InterviewerAgent → NextQuestion
-           → User Output
-```
-
-**State Management**:
-- Immutable message objects
-- Session state tracking
-- Conversation history maintenance
-- Evaluation aggregation
-
-**Test Coverage**: 17 integration tests
-
----
-
-## Performance Characteristics
-
-### Benchmarks
-
-| Operation | Target | Typical | Max |
-|-----------|--------|---------|-----|
-| Question Generation | < 5s | 3-4s | 8s |
-| Response Evaluation | < 3s | 2-3s | 5s |
-| Topic Transition | < 2s | 1-2s | 3s |
-| Full Interview (5 topics) | < 20min | 12-15min | 25min |
-
-### Resource Usage
-
-- **Memory**: ~100MB base + ~50MB per session
-- **Network**: ~500KB per question/evaluation pair
-- **Disk**: ~1MB per saved session
-- **CPU**: Minimal (I/O bound)
-
-### Scalability
-
-- **Concurrent Sessions**: Supports multiple independent sessions
-- **Max Input Sizes**: 500KB resume, 100KB job description
-- **History Length**: Efficiently handles 100+ message conversations
-- **Session Duration**: No practical limit
-
----
-
-## Known Limitations
-
-### Current Implementation
-
-1. **Single-Threaded**: Agents execute sequentially (not parallel)
-2. **Session Resume**: Not implemented (planned for future)
-3. **Prompt Truncation**: Manual review required for very long conversations
-4. **Model Flexibility**: Configured for OpenAI only (extensible design)
-
-### Future Enhancements
-
-1. **Parallel Agent Execution**: Async coordination for faster processing
-2. **Session Checkpointing**: Auto-resume interrupted interviews
-3. **Multi-LLM Support**: Adapter pattern for Anthropic, Cohere, etc.
-4. **Advanced Metrics**: Prometheus/Grafana integration
-5. **Rate Limiting**: Per-user quotas and request throttling
+**Resource Usage**: ~100MB memory, ~500KB network per Q&A pair, ~1MB disk per session
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+**Common Issues**:
 
-**Issue**: `ModuleNotFoundError: No module named 'src'`
+- `ModuleNotFoundError` → Set PYTHONPATH: `export PYTHONPATH="${PYTHONPATH}:$(pwd)"`
+- `ValueError: Valid OpenAI API key required` → Check `.env` file has valid API key
+- `CircuitBreakerOpenError` → Wait 60s for auto-recovery or check API status
+- `RateLimitError` → Wait 60s or use `gpt-3.5-turbo` model
 
-**Solution**:
-```bash
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-python main.py
-```
-
-**Issue**: `ValueError: Valid OpenAI API key required`
-
-**Solution**:
-- Ensure `.env` file exists
-- Verify `OPENAI_API_KEY` is set to actual key (not placeholder)
-- Check key is not empty or "your_api_key_here"
-
-**Issue**: `CircuitBreakerOpenError: Circuit breaker open`
-
-**Solution**:
-- Wait 60 seconds for automatic recovery
-- Check logs for underlying API failures
-- Verify API key and quota
-- Circuit will auto-recover if API becomes available
-
-**Issue**: `RateLimitError: Rate limit exceeded`
-
-**Solution**:
-- Wait 60 seconds before retrying
-- Consider using `gpt-3.5-turbo` (lower cost)
-- Check OpenAI account quota
-
-### Debug Checklist
-
-1. Check environment setup: `source venv/bin/activate`
-2. Verify dependencies: `pip list | grep -E "openai|pydantic|rich"`
-3. Validate config: `python -c "from src.utils.config import load_config; load_config()"`
-4. Check logs: `tail -f logs/interview_*.log`
-5. Test API key: `python -c "from openai import OpenAI; OpenAI(api_key='your-key').models.list()"`
-
----
-
-## Testing Strategy
-
-### Test Pyramid
-
-```
-        /\
-       /E2\    E2E Tests (7 tests)
-      /────\
-     /Integr\  Integration Tests (17 tests)
-    /────────\
-   /   Unit   \ Unit Tests (148 tests) + Edge Cases (40 tests)
-  /────────────\
-```
-
-### Test Categories
-
-1. **Unit Tests** (148 tests): Isolated component testing with mocked dependencies
-2. **Integration Tests** (17 tests): Multi-agent workflows and data flow
-3. **Edge Case Tests** (40 tests): Boundary conditions and security
-4. **End-to-End Tests** (7 tests): Complete interview scenarios
-
-### Mocking Strategy
-
-- **LLM API**: All external calls mocked using `AsyncMock`
-- **Fixtures**: 20+ reusable fixtures for common test data
-- **Error Injection**: Systematic testing of failure modes
-- **State Verification**: Assert on state changes, not just return values
-
-### Coverage Philosophy
-
-**Tested** (70%):
-- All business logic (agents, parsers, evaluators)
-- All error handling (circuit breaker, retry, validation)
-- All data models (serialization, methods, calculations)
-- All critical paths (question generation, evaluation, topic transitions)
-
-**Not Tested** (30%):
-- CLI interface (requires terminal mocking)
-- Configuration (simple startup validation)
-- Logging infrastructure (observability layer)
-- Metrics collection (observability layer)
-
-**Rationale**: Focused testing on high-value business logic and error handling over infrastructure components that provide minimal testing ROI.
-
----
-
-## Logging
-
-### Log Levels
-
-- **DEBUG**: Agent decisions, API call/response details, state transitions
-- **INFO**: Session lifecycle, question generation, evaluation results, topic transitions
-- **WARNING**: Retries, fallback usage, non-critical errors
-- **ERROR**: API failures, validation errors, agent execution failures
-
-### Log Format
-
-```
-2025-10-02 12:00:00 | INFO | mock_interview | Session started: abc123
-2025-10-02 12:00:03 | INFO | mock_interview | InterviewerAgent: Generating question for topic: Python
-2025-10-02 12:00:03 | INFO | mock_interview | Calling OpenAI API (gpt-4o)...
-2025-10-02 12:00:05 | INFO | mock_interview | OpenAI API response received (1234 characters)
-2025-10-02 12:00:05 | INFO | mock_interview | EvaluatorAgent: Evaluating response for topic: Python
-```
-
-### Log Locations
-
-- **Console**: INFO and above
-- **File**: All levels in `logs/interview_*.log`
-
----
-
-## Exception Hierarchy
-
-### 37 Custom Exceptions
-
-```
-InterviewSystemError (base)
-├── AgentError
-│   ├── AgentTimeoutError
-│   ├── AgentExecutionError
-│   └── AgentValidationError
-├── LLMError
-│   ├── LLMAPIError
-│   ├── LLMRateLimitError
-│   ├── LLMInvalidResponseError
-│   └── LLMContentFilterError
-├── ValidationError
-│   ├── InvalidResumeError
-│   ├── InvalidJobDescriptionError
-│   └── InvalidInputError
-├── SessionError
-│   ├── SessionStateError
-│   ├── SessionNotFoundError
-│   └── SessionSaveError
-├── TopicError
-│   ├── NoTopicsError
-│   └── TopicTransitionError
-├── ConfigurationError
-├── FileOperationError
-└── CircuitBreakerOpenError
-```
-
-Each exception includes:
-- Technical error message (for logs)
-- User-friendly message (for display)
-- Recoverability flag (determines retry behavior)
-- Context preservation (agent name, retry count, etc.)
+**Debug Mode**: Set `LOG_LEVEL=DEBUG` in `.env` and check `logs/interview_*.log`
 
 ---
 
@@ -1031,76 +670,16 @@ Execution:    ~5 seconds
 | utils/circuit_breaker.py | 86 | 85 | 99% | 23 |
 | utils/exceptions.py | 97 | 74 | 76% | All used |
 
-### Test Documentation
-
-- `tests/README_TESTS.md` - Complete testing strategy
-- `HOW_TO_TEST.md` - Quick testing guide
-- `COMPREHENSIVE_TEST_REPORT.md` - Detailed analysis
-- `EDGE_CASES.md` - All edge cases documented
-
 ---
 
-## Documentation
+## Assignment Deliverables
 
-### User Documentation
-
-- `README.md` - This file (complete project documentation)
-- `TESTING_GUIDE.md` - Manual testing walkthrough
-- `START_HERE.md` - Quick start guide
-
-### Developer Documentation
-
-- `PRODUCTION_READINESS.md` - Production deployment guide
-- `EDGE_CASES.md` - Edge case analysis (100+ scenarios)
-- `EDGE_CASE_SUMMARY.md` - Implementation summary
-- `tests/README_TESTS.md` - Automated testing guide
-
-### Technical Documentation
-
-- `LOGGING_CHANGES.md` - Logging implementation details
-- `COMPREHENSIVE_TEST_REPORT.md` - Test coverage analysis
-- Inline code documentation (docstrings and type hints)
-
----
-
-## Interview Assignment Context
-
-### Time Allocation
-
-- **Initial Development**: 1 hour (MVP with basic functionality)
-- **Polish & Testing**: 2 hours (comprehensive tests, edge cases, documentation)
-- **Total**: 3 hours of focused development
-
-### Deliverables
-
-1. **Working System**: Interactive CLI that conducts full technical interviews
+1. **Working System**: Interactive CLI conducting full technical interviews
 2. **Multi-Agent Architecture**: 4 specialized agents with proper separation of concerns
-3. **Production Quality**: Error handling, validation, resilience patterns
-4. **Comprehensive Testing**: 188 tests with 70% coverage
-5. **Documentation**: 15 markdown files covering all aspects
-6. **Edge Case Handling**: 100+ scenarios identified and tested
-
-### Technical Decisions Documented
-
-All architectural and implementation decisions are documented with rationale:
-- LLM provider selection (OpenAI direct vs LangChain)
-- Multi-agent communication pattern (message passing)
-- Error handling strategy (custom hierarchy + circuit breaker)
-- Testing approach (test pyramid with focus on business logic)
-
----
-
-## Additional Documentation
-
-The project includes detailed documentation files (available locally, not in repository):
-
-- `COMPREHENSIVE_TEST_REPORT.md` - Detailed test coverage analysis and metrics
-- `EDGE_CASES.md` - Complete edge case analysis (100+ scenarios documented)
-- `PRODUCTION_READINESS.md` - Production deployment checklist and best practices
-- `TESTING_GUIDE.md` - Manual testing walkthrough for system validation
-- `tests/README_TESTS.md` - Automated testing strategy and test pyramid explanation
-
-These documents provide in-depth technical analysis, testing strategies, and implementation details for reviewers.
+3. **Production Quality**: Comprehensive error handling, validation, and resilience patterns
+4. **Testing**: 188 tests achieving 70% coverage (95-100% on critical paths)
+5. **Edge Case Handling**: 100+ scenarios identified and tested
+6. **Documentation**: Complete technical documentation with inline code comments
 
 ---
 
