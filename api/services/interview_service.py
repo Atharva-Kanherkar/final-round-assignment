@@ -158,10 +158,12 @@ class InterviewService:
         Raises:
             ValueError: If session not found
         """
-        # Get agent session from memory
+        # Get agent session from memory, or reconstruct from database
         agent_session = self.active_sessions.get(session_id)
         if not agent_session:
-            raise ValueError(f"Session {session_id} not found in active sessions")
+            self.logger.info(f"Session {session_id} not in memory, reconstructing from database")
+            agent_session = self._reconstruct_session_from_db(session_id)
+            self.active_sessions[session_id] = agent_session
 
         # Save candidate message
         self._save_message(session_id, "candidate", response_text, agent_session.current_topic)
@@ -324,3 +326,115 @@ class InterviewService:
         self.db.add(message)
         self.db.commit()
         return message
+
+    def _reconstruct_session_from_db(self, session_id: UUID) -> AgentSession:
+        """
+        Reconstruct agent session from database.
+
+        Args:
+            session_id: Session ID
+
+        Returns:
+            Reconstructed AgentSession
+
+        Raises:
+            ValueError: If session not found
+        """
+        # Load database session
+        db_session = self.db.query(DBSession).filter(DBSession.id == session_id).first()
+        if not db_session:
+            raise ValueError(f"Session {session_id} not found in database")
+
+        # Reconstruct candidate profile
+        candidate_data = db_session.candidate_profile
+        candidate_profile = CandidateProfile(
+            name=candidate_data['name'],
+            skills=candidate_data['skills'],
+            experience_years=candidate_data['experience_years'],
+            education=candidate_data['education'],
+            past_roles=candidate_data['past_roles'],
+            summary=candidate_data.get('summary', ''),
+            raw_resume=candidate_data.get('raw_resume', '')
+        )
+
+        # Reconstruct job requirements
+        job_data = db_session.job_requirements
+        job_requirements = JobRequirements(
+            title=job_data['title'],
+            company=job_data['company'],
+            required_skills=job_data['required_skills'],
+            preferred_skills=job_data.get('preferred_skills', []),
+            responsibilities=job_data.get('responsibilities', []),
+            experience_required=job_data.get('experience_required', 0),
+            raw_description=job_data.get('raw_description', '')
+        )
+
+        # Reconstruct topics
+        topics = [
+            Topic(
+                name=t['name'],
+                priority=t['priority'],
+                depth=t.get('depth', 'surface'),
+                questions_asked=t.get('questions_asked', 0),
+                covered=t.get('covered', False)
+            )
+            for t in db_session.topics
+        ]
+
+        # Create agent session
+        from src.models.session import SessionStatus as AgentSessionStatus
+        agent_session = AgentSession(
+            session_id=str(session_id),
+            candidate_profile=candidate_profile,
+            job_requirements=job_requirements,
+            topics=topics,
+            current_topic=db_session.current_topic,
+            current_topic_index=db_session.current_topic_index,
+            status=AgentSessionStatus.ACTIVE if db_session.status == "active" else AgentSessionStatus.COMPLETED,
+            start_time=db_session.start_time,
+            end_time=db_session.end_time,
+            questions_asked=db_session.questions_asked
+        )
+
+        # Load messages from database and reconstruct conversation history
+        db_messages = self.db.query(DBMessage).filter(
+            DBMessage.session_id == session_id
+        ).order_by(DBMessage.timestamp).all()
+
+        from src.models.session import Message
+        for db_msg in db_messages:
+            msg = Message(
+                role=db_msg.role,
+                content=db_msg.content,
+                timestamp=db_msg.timestamp,
+                topic=db_msg.topic,
+                metadata=db_msg.msg_metadata or {}
+            )
+            agent_session.conversation_history.append(msg)
+
+        # Load evaluations from database
+        db_evals = self.db.query(DBEvaluation).filter(
+            DBEvaluation.session_id == session_id
+        ).order_by(DBEvaluation.timestamp).all()
+
+        from src.models.evaluation import ResponseEvaluation
+        for db_eval in db_evals:
+            evaluation = ResponseEvaluation(
+                question=db_eval.question,
+                response=db_eval.response,
+                topic=db_eval.topic,
+                timestamp=db_eval.timestamp,
+                technical_accuracy=db_eval.technical_accuracy,
+                depth=db_eval.depth,
+                clarity=db_eval.clarity,
+                relevance=db_eval.relevance,
+                overall_score=db_eval.overall_score,
+                strengths=db_eval.strengths or [],
+                gaps=db_eval.gaps or [],
+                feedback=db_eval.feedback
+            )
+            agent_session.evaluations.append(evaluation)
+
+        self.logger.info(f"Reconstructed session {session_id} with {len(db_messages)} messages and {len(db_evals)} evaluations")
+
+        return agent_session
