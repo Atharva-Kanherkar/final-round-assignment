@@ -18,8 +18,14 @@ depends_on = None
 
 def upgrade() -> None:
     """Create initial tables."""
-    # Create enum type
-    op.execute("CREATE TYPE sessionstatus AS ENUM ('active', 'paused', 'completed')")
+    # Create enum type if it doesn't exist
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE sessionstatus AS ENUM ('active', 'paused', 'completed');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+    """)
 
     # Create sessions table
     op.create_table(
