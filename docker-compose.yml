@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: interview_user
+      POSTGRES_PASSWORD: interview_password
+      POSTGRES_DB: interview_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interview_user -d interview_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI application
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://interview_user:interview_password@db:5432/interview_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MODEL_NAME=${MODEL_NAME:-gpt-4o}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKERS=1
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

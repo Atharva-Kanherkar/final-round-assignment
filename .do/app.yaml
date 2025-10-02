@@ -1,0 +1,62 @@
+name: ai-interview-api
+region: nyc
+
+# Database
+databases:
+  - name: interview-db
+    engine: PG
+    version: "16"
+    size: db-s-1vcpu-1gb
+    num_nodes: 1
+    production: true
+
+# API Service
+services:
+  - name: api
+    github:
+      repo: Atharva-Kanherkar/final-round-assignment
+      branch: main
+      deploy_on_push: true
+
+    dockerfile_path: Dockerfile
+
+    instance_count: 1
+    instance_size_slug: professional-xs
+
+    http_port: 8000
+
+    health_check:
+      http_path: /api/ping
+      initial_delay_seconds: 10
+      period_seconds: 30
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+    envs:
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: ${interview-db.DATABASE_URL}
+
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: MODEL_NAME
+        value: gpt-4o
+
+      - key: LOG_LEVEL
+        value: INFO
+
+      - key: WORKERS
+        value: "2"
+
+      - key: MAX_RETRIES
+        value: "3"
+
+      - key: TIMEOUT_SECONDS
+        value: "30"
+
+    routes:
+      - path: /

@@ -21,24 +21,24 @@ build/
 *.swo
 .DS_Store
 
-# Logs
+# Logs and sessions (will be created in container)
 logs/
-*.log
-
-# Sessions
 sessions/
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
+test.db
 
-# Temporary files
-*.tmp
-*.bak
+# Git
+.git/
+.gitignore
 
-# Documentation (keep only README and deployment docs)
+# Documentation
 *.md
 !README.md
-!DEPLOYMENT.md
-!API_README.md
+
+# Temporary
+*.tmp
+*.bak
