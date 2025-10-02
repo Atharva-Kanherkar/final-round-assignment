@@ -18,16 +18,7 @@ depends_on = None
 
 def upgrade() -> None:
     """Create initial tables."""
-    # Create enum type if it doesn't exist
-    op.execute("""
-        DO $$ BEGIN
-            CREATE TYPE sessionstatus AS ENUM ('active', 'paused', 'completed');
-        EXCEPTION
-            WHEN duplicate_object THEN null;
-        END $$;
-    """)
-
-    # Create sessions table
+    # Create sessions table (using String for status to avoid enum issues)
     op.create_table(
         'sessions',
         sa.Column('id', UUID(as_uuid=True), primary_key=True),
@@ -39,13 +30,20 @@ def upgrade() -> None:
         sa.Column('topics', sa.JSON(), nullable=False),
         sa.Column('current_topic', sa.String(100), nullable=False),
         sa.Column('current_topic_index', sa.Integer(), default=0),
-        sa.Column('status', sa.Enum('active', 'paused', 'completed', name='sessionstatus'), nullable=False),
+        sa.Column('status', sa.String(20), nullable=False),  # Using String instead of Enum
         sa.Column('start_time', sa.DateTime(), nullable=False),
         sa.Column('end_time', sa.DateTime(), nullable=True),
         sa.Column('questions_asked', sa.Integer(), default=0),
         sa.Column('average_score', sa.Float(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
+    )
+
+    # Add check constraint for valid status values
+    op.create_check_constraint(
+        'valid_status',
+        'sessions',
+        "status IN ('active', 'paused', 'completed')"
     )
 
     # Create messages table
@@ -119,5 +117,3 @@ def downgrade() -> None:
     op.drop_table('evaluations')
     op.drop_table('messages')
     op.drop_table('sessions')
-
-    op.execute('DROP TYPE IF EXISTS sessionstatus')
