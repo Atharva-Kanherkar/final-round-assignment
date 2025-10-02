@@ -214,8 +214,10 @@ class JobDescriptionParser:
 
         lines = [line.strip() for line in jd_text.split('\n') if line.strip()]
 
-        # Extract title (usually first line)
+        # Extract title (usually first line, truncate to 250 chars to fit DB)
         title = lines[0] if lines else "Unknown Position"
+        if len(title) > 250:
+            title = title[:250].rsplit(' ', 1)[0] + "..."  # Truncate at word boundary
 
         # Extract company
         company = self._extract_company(jd_text)

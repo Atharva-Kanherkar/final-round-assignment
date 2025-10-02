@@ -22,7 +22,7 @@ class DBSession(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     candidate_name = Column(String(255), nullable=False)
-    job_title = Column(String(255), nullable=False)
+    job_title = Column(String(500), nullable=False)  # Increased to handle longer titles
     company = Column(String(255), nullable=False)
 
     # JSON fields for complex data
@@ -107,7 +107,7 @@ class DBFinalReport(Base):
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), unique=True, nullable=False)
 
     candidate_name = Column(String(255), nullable=False)
-    job_title = Column(String(255), nullable=False)
+    job_title = Column(String(500), nullable=False)  # Increased to handle longer titles
     duration_minutes = Column(Float, nullable=False)
 
     total_questions = Column(Integer, nullable=False)
