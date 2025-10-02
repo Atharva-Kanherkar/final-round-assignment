@@ -51,11 +51,11 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# CORS middleware
+# CORS middleware - Allow all origins for interview assignment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure based on deployment
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Changed to False to work with wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -318,7 +318,7 @@ class InterviewService:
             role=role,
             content=content,
             topic=topic,
-            metadata=metadata or {},
+            msg_metadata=metadata or {},  # Changed from metadata to msg_metadata
             timestamp=datetime.utcnow()
         )
         self.db.add(message)

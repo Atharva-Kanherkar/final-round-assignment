@@ -112,10 +112,10 @@ async def list_sessions(
     return sessions
 
 
-@router.get("/sessions/{session_id}", response_model=SessionDetailResponse)
+@router.get("/sessions/{session_id}")
 async def get_session(
     session_id: UUID,
-    service: InterviewService = Depends(get_interview_service)
+    db: Session = Depends(get_db)
 ):
     """
     Get session details.
@@ -124,13 +124,37 @@ async def get_session(
         session_id: Session ID
 
     Returns:
-        Complete session details
+        Session details
     """
-    db_session = service.get_session(session_id)
+    db_session = db.query(DBSession).filter(DBSession.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    return db_session
+    # Get last interviewer message as current question
+    last_question = db.query(DBMessage).filter(
+        DBMessage.session_id == session_id,
+        DBMessage.role == "interviewer"
+    ).order_by(DBMessage.timestamp.desc()).first()
+
+    response = {
+        "session_id": str(db_session.id),
+        "candidate_name": db_session.candidate_name,
+        "job_title": db_session.job_title,
+        "company": db_session.company,
+        "current_topic": db_session.current_topic,
+        "status": db_session.status,
+        "topics": db_session.topics,
+        "questions_asked": db_session.questions_asked,
+        "first_question": {
+            "question": last_question.content if last_question else "",
+            "topic": last_question.topic if last_question else db_session.current_topic,
+            "question_number": db_session.questions_asked,
+            "topic_progress": f"{db_session.current_topic_index + 1}/{len(db_session.topics)}",
+            "questions_in_topic": 1
+        } if last_question else None
+    }
+
+    return response
 
 
 @router.delete("/sessions/{session_id}", status_code=204)
