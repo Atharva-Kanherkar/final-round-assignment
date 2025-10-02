@@ -11,7 +11,7 @@ An AI-powered interview coach system featuring a multi-agent architecture that c
 ## 🎥 Demo Videos
 
 - **Full System Walkthrough**: [Watch on Loom](https://www.loom.com/share/59aee0875afd437dbd8b282b99eacf5f?sid=af2b2830-63e9-45b0-8e3d-4506bbc4d3db)
-- **Feature Demonstration**: [Watch on Loom](https://www.loom.com/share/629e689cc8eb479db13a7311386145f6?sid=6a2ff85c-5a06-469d-ae71-7d27903250e0)
+- **Feature Demonstration**: [Watch on Loom](https://www.loom.com/share/51f989ce8e2f413ca2644b1c5d0c37b5)
 
 ## 🚀 Live Deployment
 
