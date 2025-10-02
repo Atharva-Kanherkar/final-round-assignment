@@ -3,10 +3,29 @@ import io
 import logging
 from typing import Tuple
 from fastapi import UploadFile, HTTPException
-from pypdf import PdfReader
-from docx import Document
 
 logger = logging.getLogger(__name__)
+
+# Lazy imports to prevent startup failure if dependencies not installed
+def _get_pdf_reader():
+    try:
+        from pypdf import PdfReader
+        return PdfReader
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="PDF parsing not available. Install pypdf package."
+        )
+
+def _get_docx_document():
+    try:
+        from docx import Document
+        return Document
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="DOCX parsing not available. Install python-docx package."
+        )
 
 
 class FileParser:
@@ -99,6 +118,7 @@ class FileParser:
             Extracted text
         """
         try:
+            PdfReader = _get_pdf_reader()
             pdf_file = io.BytesIO(content)
             pdf_reader = PdfReader(pdf_file)
 
@@ -109,6 +129,8 @@ class FileParser:
                     text_parts.append(page_text)
 
             return '\n'.join(text_parts)
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"PDF parsing error: {e}")
             raise ValueError(f"Failed to parse PDF: {str(e)}")
@@ -125,6 +147,7 @@ class FileParser:
             Extracted text
         """
         try:
+            Document = _get_docx_document()
             docx_file = io.BytesIO(content)
             doc = Document(docx_file)
 
@@ -141,6 +164,8 @@ class FileParser:
                             text_parts.append(cell.text)
 
             return '\n'.join(text_parts)
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"DOCX parsing error: {e}")
             raise ValueError(f"Failed to parse DOCX: {str(e)}")
