@@ -1,0 +1,21 @@
+John Doe
+Senior Software Engineer
+5 years experience
+
+Skills: Python, JavaScript, React, Node.js, AWS, Docker, Kubernetes, PostgreSQL, MongoDB, Redis, Git, CI/CD, System Design
+
+Experience:
+- Tech Corp (2020-2023): Led backend development for microservices architecture serving 1M+ users. Designed and implemented RESTful APIs using Python/Django and Node.js. Migrated monolithic application to containerized microservices using Docker and Kubernetes. Reduced API response time by 40% through optimization and caching strategies with Redis. Mentored 3 junior developers and conducted code reviews.
+
+- StartupXYZ (2018-2020): Full-stack development using React and Node.js. Built user authentication and authorization system with JWT tokens. Implemented real-time features using WebSockets. Integrated third-party payment APIs (Stripe). Contributed to increasing user base from 10K to 100K users.
+
+Education: BS Computer Science, State University (2014-2018)
+
+Projects:
+- Developed an open-source task management tool using Python Flask and React
+- Built a distributed caching system as part of university research project
+- Contributed to several open-source projects on GitHub
+
+Certifications:
+- AWS Certified Solutions Architect - Associate
+- Certified Kubernetes Administrator (CKA)

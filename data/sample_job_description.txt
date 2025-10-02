@@ -1,0 +1,33 @@
+Senior Backend Engineer
+Company: TechCo
+
+Requirements:
+- 5+ years Python experience
+- Strong system design skills
+- Experience with distributed systems
+- AWS/Cloud experience required
+- Experience with microservices architecture
+- Proficiency in SQL and NoSQL databases
+- Experience with Docker and Kubernetes
+- Strong understanding of RESTful API design
+- Leadership experience preferred
+- Excellent problem-solving and communication skills
+
+Responsibilities:
+- Design scalable backend services handling millions of requests
+- Lead technical initiatives and architecture decisions
+- Mentor junior engineers and conduct code reviews
+- Collaborate with frontend team and product managers
+- Optimize system performance and reliability
+- Implement monitoring and observability solutions
+- Participate in on-call rotation
+- Drive best practices for testing and deployment
+
+Nice to Have:
+- Experience with message queues (RabbitMQ, Kafka)
+- Knowledge of GraphQL
+- Open-source contributions
+- Experience with Infrastructure as Code (Terraform)
+
+About TechCo:
+TechCo is a fast-growing technology company building innovative solutions for enterprise customers. We value technical excellence, collaboration, and continuous learning.

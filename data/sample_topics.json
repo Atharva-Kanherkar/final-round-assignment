@@ -1,0 +1,47 @@
+{
+  "topics": [
+    {
+      "name": "Python",
+      "priority": 5,
+      "depth": "surface",
+      "description": "Core Python programming and advanced features"
+    },
+    {
+      "name": "System Design",
+      "priority": 5,
+      "depth": "surface",
+      "description": "Scalable system architecture and design patterns"
+    },
+    {
+      "name": "AWS",
+      "priority": 4,
+      "depth": "surface",
+      "description": "Cloud infrastructure and services"
+    },
+    {
+      "name": "Microservices",
+      "priority": 4,
+      "depth": "surface",
+      "description": "Microservices architecture and best practices"
+    },
+    {
+      "name": "Docker and Kubernetes",
+      "priority": 4,
+      "depth": "surface",
+      "description": "Containerization and orchestration"
+    },
+    {
+      "name": "Database Design",
+      "priority": 3,
+      "depth": "surface",
+      "description": "SQL and NoSQL database design and optimization"
+    },
+    {
+      "name": "API Design",
+      "priority": 3,
+      "depth": "surface",
+      "description": "RESTful API design and best practices"
+    }
+  ],
+  "notes": "Topics are generated based on candidate profile and job requirements. This file is optional - the system will auto-generate topics if not provided."
+}
