@@ -1,0 +1,21 @@
+{
+  "name": "AI Mock Interview System",
+  "short_name": "AI Interview",
+  "description": "Practice technical interviews with AI-powered feedback",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
